@@ -1,2 +1,2 @@
 # AI_Final_Project
- Reinforcement Learning on Platformer
+ Reinforcement Learning for a platformer type game
