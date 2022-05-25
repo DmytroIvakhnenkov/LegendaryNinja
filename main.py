@@ -53,8 +53,9 @@ class Player(pygame.sprite.Sprite):
         # This could also be an image loaded from the disk.
         width = 40
         height = 60
-        self.image = pygame.Surface([width, height])
-        self.image.fill(RED)
+        self.image = pygame.image.load("ninja.png")
+        self.image = pygame.transform.scale(self.image, [width, height])
+        
  
         # Set a referance to the image rect.
         self.rect = self.image.get_rect()
@@ -152,7 +153,6 @@ class Platform(pygame.sprite.Sprite):
             an array of 5 numbers like what's defined at the top of this code.
             """
         super().__init__()
- 
         self.image = pygame.Surface([width, height])
         self.image.fill(GREEN)
  
@@ -235,17 +235,27 @@ class Level(object):
             planks_generated = random.randint(1,3)
             for i in range(planks_generated):
                 # Add a custom moving platform
-                platform_width = random.randint(80,120)
+                platform_width = random.randint(40,(SCREEN_WIDTH/planks_generated)-self.player.rect.width*1.5)
+                if(platform_width > SCREEN_WIDTH*0.4):
+                    platform_width = SCREEN_WIDTH*0.4
                 block = MovingPlatform(platform_width, 40)
                 x1 = (SCREEN_WIDTH/planks_generated)*i
-                x2 = ((SCREEN_WIDTH/planks_generated))*(i+1)-self.player.rect.width
+                x2 = ((SCREEN_WIDTH/planks_generated))*(i+1)-self.player.rect.width*1.5 - platform_width
                 # need to make sure that x2 > platform_width + player_width
-                block.rect.x = random.randint(x1,x2-platform_width)
-                block.rect.y = 80
+                block.rect.x = random.randint(x1,x2)
+                block.rect.y = 60
                 block.change_y = 1
                 block.player = self.player
                 block.level = self
                 self.platform_list.add(block)
+
+        # Check if the platform is beyond the main screen
+        new_planks_list = pygame.sprite.Group()
+        for platform in self.platform_list:
+            if platform.rect.y < SCREEN_HEIGHT-100:
+                new_planks_list.add(platform)
+
+        self.platform_list = new_planks_list
 
         self.platform_list.update()
         self.enemy_list.update()
@@ -255,6 +265,10 @@ class Level(object):
  
         # Draw the background
         screen.fill(BLUE)
+        pygame.draw.rect(screen, BLACK, [0, 0, 600, 100], 0)
+        pygame.draw.rect(screen, BLACK, [0, 500, 600, 100], 0)
+        pygame.draw.rect(screen, RED, [0, 97, 600, 3], 0)
+        pygame.draw.rect(screen, RED, [0, 500, 600, 3], 0)
  
         # Draw all the sprite lists that we have
         self.platform_list.draw(screen)
@@ -274,6 +288,15 @@ class Level_01(Level):
         # Add a custom moving platform
         block = MovingPlatform(70, 40)
         block.rect.x = 100
+        block.rect.y = 230
+        block.change_y = 1
+        block.player = self.player
+        block.level = self
+        self.platform_list.add(block)
+
+        # Add a custom moving platform
+        block = MovingPlatform(70, 40)
+        block.rect.x = 300
         block.rect.y = 230
         block.change_y = 1
         block.player = self.player
@@ -339,13 +362,18 @@ def main():
                     player.stop()
 
 
-        
+
  
         # Update the player.
         active_sprite_list.update()
  
         # Update items in the level
         current_level.update()
+
+        if((player.rect.y > SCREEN_HEIGHT - 100 - player.rect.height)
+        or (player.rect.y <  100)):
+            print("GAME OVER")
+            #done = True
  
         # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
         current_level.draw(screen)
