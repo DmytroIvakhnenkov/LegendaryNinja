@@ -224,21 +224,22 @@ class Level(object):
                 x2 = ((SCREEN_WIDTH/planks_generated))*(i+1)-self.player.rect.width*1.5 - platform_width
                 # need to make sure that x2 > platform_width + player_width
                 block.rect.x = random.randint(x1,x2)
-                block.rect.y = 60
+                block.rect.y = 59
                 block.change_y = 1
                 block.player = self.player
                 block.level = self
                 self.platform_list.add(block)
 
+        self.platform_list.update()
+
         # Check if the platform is beyond the main screen
-        new_planks_list = pygame.sprite.Group()
+        new_platform_list = pygame.sprite.Group()
         for platform in self.platform_list:
             if platform.rect.y < SCREEN_HEIGHT-100:
-                new_planks_list.add(platform)
+                new_platform_list.add(platform)
 
-        self.platform_list = new_planks_list
+        self.platform_list = new_platform_list
 
-        self.platform_list.update()
         self.enemy_list.update()
  
     def draw(self, screen):
@@ -285,80 +286,120 @@ class Level_01(Level):
         self.platform_list.add(block)
  
  
- 
-def main():
-    """ Main Program """
-    pygame.init()
- 
-    # Set the height and width of the screen
-    size = [SCREEN_WIDTH, SCREEN_HEIGHT]
-    screen = pygame.display.set_mode(size)
- 
-    pygame.display.set_caption("Platformer with moving platforms")
- 
-    # Create the player
-    player = Player()
- 
-    # Create all the levels
-    level_list = []
-    level_list.append(Level_01(player))
- 
-    # Set the current level
-    current_level_no = 0
-    current_level = level_list[current_level_no]
- 
-    active_sprite_list = pygame.sprite.Group()
-    player.level = current_level
- 
-    player.rect.x = 100
-    player.rect.y = 230 - player.rect.height
-    active_sprite_list.add(player)
- 
-    # Loop until the user clicks the close button.
-    done = False
- 
-    # Used to manage how fast the screen updates
-    clock = pygame.time.Clock()
- 
-    # -------- Main Program Loop -----------
-    while not done:
+class LegendaryNinja_v0():
+
+    def __init__(self):
+
+        pygame.init()
+    
+        # Set the height and width of the screen
+        size = [SCREEN_WIDTH, SCREEN_HEIGHT]
+        self.screen = pygame.display.set_mode(size)
+    
+        pygame.display.set_caption("Platformer with moving platforms")
+    
+        # Create the player
+        self.player = Player()
+        # Create the level
+        self.current_level = Level_01(self.player)   
+        self.active_sprite_list = pygame.sprite.Group()
+        self.player.level = self.current_level
+    
+        self.player.rect.x = 100
+        self.player.rect.y = 230 - self.player.rect.height
+        self.active_sprite_list.add(self.player)
+        # left, right, up
+        self.action_space = [0, 1, 2, 3]
+
+        # Update observation space
+        self.observation_space = [0 for i in range(29)]
+
+    
+
+    def step(self, action):
+        done = False
+        reward = 1
         global f
         f = f + 1
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                done = True
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    player.go_left()
-                if event.key == pygame.K_RIGHT:
-                    player.go_right()
-                if event.key == pygame.K_UP:
-                    player.jump()
-
+        if action == self.action_space[0]:
+            self.player.go_left()
+        if action == self.action_space[1]:
+            self.player.go_right()
+        if action == self.action_space[2]:
+            self.player.jump()
+        if action == self.action_space[3]:
+            self.player.stop()
 
         # Update the player.
-        active_sprite_list.update()
- 
-        # Update items in the level
-        current_level.update()
+        self.active_sprite_list.update()
 
-        print(len(current_level.platform_list.sprites()), end = " ")
- 
+        # Update items in the level
+        self.current_level.update()
+
+        if((self.player.rect.y > SCREEN_HEIGHT - 100 - self.player.rect.height)
+        or (self.player.rect.y <  100)):
+            done = True
+
         # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
-        current_level.draw(screen)
-        active_sprite_list.draw(screen)
- 
+        #self.current_level.draw(self.screen)
+        #self.active_sprite_list.draw(self.screen)
+
         # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
- 
+
         # Limit to 60 frames per second
-        clock.tick(60)
- 
+        #pygame.time.Clock().tick(60)
+
         # Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
+        
+        # Update observation space
+        self.observation_space = [0 for i in range(29)]
+        self.observation_space[0] = self.player.rect.x/600
+        self.observation_space[1] = self.player.rect.y/600
+        p = self.current_level.platform_list.sprites()
+        try:
+            for i in range(len(p)):
+                self.observation_space[3*i+2] = p[i].rect.width/600
+                self.observation_space[3*i+3] = p[i].rect.x/600
+                self.observation_space[3*i+4] = p[i].rect.y/600
+        except:
+            for i in range(9):
+                self.observation_space[3*i+2] = p[i].rect.width/600
+                self.observation_space[3*i+3] = p[i].rect.x/600
+                self.observation_space[3*i+4] = p[i].rect.y/600
+
+        return self.observation_space, reward, done
+
+
+    def reset(self):
+        global f
+        f = -1
+         # Create the player
+        self.player = Player()
+        # Create the level
+        self.current_level = Level_01(self.player)   
+        self.active_sprite_list = pygame.sprite.Group()
+        self.player.level = self.current_level
+    
+        self.player.rect.x = 100
+        self.player.rect.y = 230 - self.player.rect.height
+        self.active_sprite_list.add(self.player)
+
+
+        # Update observation space
+        self.observation_space = [0 for i in range(29)]
+        self.observation_space[0] = self.player.rect.x/600
+        self.observation_space[1] = self.player.rect.y/600
+        p = self.current_level.platform_list.sprites()
+        
+        for i in range(len(p)):
+            self.observation_space[3*i+2] = p[i].rect.width/600
+            self.observation_space[3*i+3] = p[i].rect.x/600
+            self.observation_space[3*i+4] = p[i].rect.y/600
+
+        return self.observation_space
+
+    def close(self):
+        pygame.quit()
  
-    # Be IDLE friendly. If you forget this line, the program will 'hang'
-    # on exit.
-    pygame.quit()
  
-if __name__ == "__main__":
-    main()
