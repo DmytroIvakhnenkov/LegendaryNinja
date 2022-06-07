@@ -32,8 +32,8 @@ class Player(pygame.sprite.Sprite):
  
         # Create an image of the block, and fill it with a color.
         # This could also be an image loaded from the disk.
-        width = 40
-        height = 60
+        width = 30
+        height = 45
         self.image = pygame.image.load("ninja.png")
         self.image = pygame.transform.scale(self.image, [width, height])
         
@@ -110,7 +110,7 @@ class Player(pygame.sprite.Sprite):
  
         # If it is ok to jump, set our speed upwards
         if len(platform_hit_list) > 0 or self.rect.bottom >= SCREEN_HEIGHT:
-            self.change_y = -10
+            self.change_y = -11
  
     # Player-controlled movement:
     def go_left(self):
@@ -212,18 +212,25 @@ class Level(object):
         """ Update everything in this level."""
 
         # Generate a new planks every X frames
-        if(f % 150 == 0):
-            planks_generated = random.randint(1,3)
+        if(f % 300 == 0):
+            planks_generated = 2
             for i in range(planks_generated):
                 # Add a custom moving platform
-                platform_width = random.randint(40,(SCREEN_WIDTH/planks_generated)-self.player.rect.width*1.5)
-                if(platform_width > SCREEN_WIDTH*0.4):
-                    platform_width = SCREEN_WIDTH*0.4
-                block = MovingPlatform(platform_width, 40)
-                x1 = (SCREEN_WIDTH/planks_generated)*i
-                x2 = ((SCREEN_WIDTH/planks_generated))*(i+1)-self.player.rect.width*1.5 - platform_width
-                # need to make sure that x2 > platform_width + player_width
-                block.rect.x = random.randint(x1,x2)
+                block = MovingPlatform(200, 20)
+                block.rect.x = 30+300*i
+                block.rect.y = 60
+                block.change_y = 1
+                block.player = self.player
+                block.level = self
+                self.platform_list.add(block)
+
+        # Generate a new planks every X frames
+        if(f % 300 == 150):
+            planks_generated = 1
+            for i in range(planks_generated):
+                # Add a custom moving platform
+                block = MovingPlatform(200, 20)
+                block.rect.x = 200
                 block.rect.y = 60
                 block.change_y = 1
                 block.player = self.player
@@ -267,22 +274,14 @@ class Level_01(Level):
         Level.__init__(self, player)
  
         # Add a custom moving platform
-        block = MovingPlatform(70, 40)
-        block.rect.x = 100
+        block = MovingPlatform(200, 20)
+        block.rect.x = 200
         block.rect.y = 230
         block.change_y = 1
         block.player = self.player
         block.level = self
         self.platform_list.add(block)
 
-        # Add a custom moving platform
-        block = MovingPlatform(70, 40)
-        block.rect.x = 300
-        block.rect.y = 230
-        block.change_y = 1
-        block.player = self.player
-        block.level = self
-        self.platform_list.add(block)
  
  
  
@@ -310,7 +309,7 @@ def main():
     active_sprite_list = pygame.sprite.Group()
     player.level = current_level
  
-    player.rect.x = 100
+    player.rect.x = 200
     player.rect.y = 230 - player.rect.height
     active_sprite_list.add(player)
  
@@ -335,14 +334,17 @@ def main():
                 if event.key == pygame.K_UP:
                     player.jump()
 
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_LEFT and player.change_x<0 :
+                    player.stop()
+                if event.key == pygame.K_RIGHT and player.change_x>0 :
+                    player.stop()
+
 
         # Update the player.
         active_sprite_list.update()
- 
         # Update items in the level
         current_level.update()
-
-        print(len(current_level.platform_list.sprites()), end = " ")
  
         # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
         current_level.draw(screen)

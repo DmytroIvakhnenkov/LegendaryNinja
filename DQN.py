@@ -60,13 +60,19 @@ class Net(nn.Module):
     The structure of the Neural Network calculating Q values of each state.
     '''
 
-    def __init__(self,  num_actions, hidden_layer_size=100):
+    def __init__(self,  num_actions, hidden_layer_size=32):
         super(Net, self).__init__()
-        self.input_state = 29  # the dimension of state space
+        self.input_state = 18  # the dimension of state space
         self.num_actions = num_actions  # the dimension of action space
-        self.fc1 = nn.Linear(self.input_state, 100)  # input layer
-        self.fc2 = nn.Linear(100, hidden_layer_size)  # hidden layer
+        self.fc1 = nn.Linear(self.input_state, 32)  # input layer
+        self.fc2 = nn.Linear(32, hidden_layer_size)  # hidden layer
         self.fc3 = nn.Linear(hidden_layer_size, num_actions)  # output layer
+        nn.init.uniform_(self.fc1.bias, 0, 1e-3)
+        nn.init.uniform_(self.fc1.weight, 0, 1e-3)
+        nn.init.uniform_(self.fc2.bias, 0, 1e-3)
+        nn.init.uniform_(self.fc2.weight, 0, 1e-3)
+        nn.init.uniform_(self.fc3.bias, 0, 1e-3)
+        nn.init.uniform_(self.fc3.weight, 0, 1e-3)
 
     def forward(self, states):
         '''
@@ -85,8 +91,8 @@ class Net(nn.Module):
 
 
 class Agent():
-    def __init__(self, env, epsilon=0.05, learning_rate=0.0002, GAMMA=0.97, batch_size=32, capacity=10000):
-        """
+    def __init__(self, env, epsilon=0.20, learning_rate=0.0002, GAMMA=1, batch_size=32, capacity=10000):
+        """ 
         The agent learning how to control the action of the cart pole.
         
         Hyperparameters:
@@ -142,9 +148,7 @@ class Agent():
 
         # Begin your code
         observations, actions, rewards, next_observations, done = self.buffer.sample(self.batch_size)
-        #print(observations)
-        #print()
-        #print()
+        #print(rewards)
         observations = torch.FloatTensor(np.array(observations))
         actions = torch.LongTensor(actions)
         next_observations = torch.FloatTensor(np.array(next_observations))
@@ -172,9 +176,6 @@ class Agent():
         self.optimizer.step()
         # End your code
 
-        # You can add some conditions to decide when to save your neural network model
-        if self.count % 100 == 0:
-            torch.save(self.target_net.state_dict(), "./Tables/DQN.pt")
         return loss
     
 
@@ -237,19 +238,20 @@ def train(env):
         None (Don't need to return anything)
     """
     agent = Agent(env)
-    episode = 300
+    episode = 3000
     rewards = []
     loss = []
-    for _ in tqdm(range(episode)):
+    for i in tqdm(range(episode)):
+        if(i == 1000):
+            agent.epsilon = 0.05
         state = env.reset()
         count = 0
         while True:
             count += 1
             agent.count += 1
-            # env.render()
             action = agent.choose_action(state)
             next_state, reward, done = env.step(action)
-            agent.buffer.insert(state, int(action), reward,
+            agent.buffer.insert(state, action, reward,
                                 next_state, int(done))
             if agent.count >= 1000:
                 loss.append(agent.learn().detach().numpy())
@@ -258,6 +260,8 @@ def train(env):
                 break
             state = next_state
     total_rewards.append(rewards)
+
+    torch.save(agent.target_net.state_dict(), "./Tables/DQN.pt")
 
     plt.plot(loss)
     plt.show()
@@ -276,7 +280,7 @@ def test(env):
     rewards = []
     testing_agent = Agent(env)
     testing_agent.target_net.load_state_dict(torch.load("./Tables/DQN.pt"))
-    for _ in range(100):
+    for _ in range(10):
         state = env.reset()
         count = 0
         while True:
@@ -306,7 +310,7 @@ if __name__ == "__main__":
     for i in range(1):
         print(f"#{i + 1} training progress")
         train(env)
-    # testing section:
+    #testing section:
     test(env)
     
     if not os.path.exists("./Rewards"):
