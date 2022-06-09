@@ -340,7 +340,7 @@ def main():
                 if event.key == pygame.K_RIGHT and player.change_x>0 :
                     player.stop()
 
-
+       
         # Update the player.
         active_sprite_list.update()
         # Update items in the level

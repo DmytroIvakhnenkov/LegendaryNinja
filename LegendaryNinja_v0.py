@@ -3,8 +3,8 @@ import random
  
 # Global constants
 
-# What frame is the game on plus 149
-f = -1
+# What frame is the game on 
+f = 0
  
 # Colors
 BLACK = (0, 0, 0)
@@ -218,7 +218,7 @@ class Level(object):
                 # Add a custom moving platform
                 block = MovingPlatform(200, 20)
                 block.rect.x = 30+300*i
-                block.rect.y = 60
+                block.rect.y = 80
                 block.change_y = 1
                 block.player = self.player
                 block.level = self
@@ -231,15 +231,16 @@ class Level(object):
                 # Add a custom moving platform
                 block = MovingPlatform(200, 20)
                 block.rect.x = 200
-                block.rect.y = 60
+                block.rect.y = 80
                 block.change_y = 1
                 block.player = self.player
                 block.level = self
                 self.platform_list.add(block)
 
         self.platform_list.update()
+        self.enemy_list.update()
 
-        # Check if the platform is beyond the main screen
+        # Check if the platform is in the main screen
         new_platform_list = pygame.sprite.Group()
         for platform in self.platform_list:
             if platform.rect.y < SCREEN_HEIGHT-100:
@@ -247,7 +248,7 @@ class Level(object):
 
         self.platform_list = new_platform_list
 
-        self.enemy_list.update()
+        
  
     def draw(self, screen):
         """ Draw everything on this level. """
@@ -288,16 +289,12 @@ class Level_01(Level):
  
 class LegendaryNinja_v0():
 
-    def __init__(self):
+    def __init__(self, render):
 
+        self.render = render
+        self.reward = 0
         pygame.init()
-    
-        # Set the height and width of the screen
-        size = [SCREEN_WIDTH, SCREEN_HEIGHT]
-        self.screen = pygame.display.set_mode(size)
-    
-        pygame.display.set_caption("Platformer with moving platforms")
-    
+
         # Create the player
         self.player = Player()
         # Create the level
@@ -316,16 +313,25 @@ class LegendaryNinja_v0():
         # Update observation space
         self.observation_space = [0 for i in range(18)]
 
-    
+        if(render):
+            # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
+            # Set the height and width of the screen
+            size = [SCREEN_WIDTH, SCREEN_HEIGHT]
+            self.screen = pygame.display.set_mode(size)
+            pygame.display.set_caption("LegendaryNinja")
+            self.current_level.draw(self.screen)
+            self.active_sprite_list.draw(self.screen)
+            # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
+        else:
+            pygame.display.quit()
+       
 
     
-
     def step(self, action):
         done = False
-        on_platform = 0
-        reward = 1
-        global f
-        f = f + 1
+        
+        self.reward = 0.1
+        
         if action == self.action_space[0]:
             self.player.go_left()
         if action == self.action_space[1]:
@@ -345,8 +351,7 @@ class LegendaryNinja_v0():
 
         if((self.player.rect.y > SCREEN_HEIGHT - 100 - self.player.rect.height)
         or (self.player.rect.y <  100)):
-            done = True
-            reward -= 100
+            done = True    
 
         
         p = self.current_level.platform_list.sprites()
@@ -355,30 +360,30 @@ class LegendaryNinja_v0():
             and self.player.rect.x > p[i].rect.x-self.player.rect.width
             and self.player.rect.y + self.player.rect.height <= p[i].rect.y
             and self.player.rect.y + self.player.rect.height >= p[i].rect.y-1):
-                on_platform = 1
                 if(self.player_platform != p[i]):
                     print()
                     self.player_platform = p[i]
-                    reward += 1000
+                    self.reward += 0.5
 
-        #reward -= abs(SCREEN_HEIGHT/3 - self.player.rect.y)/10
-        
-        # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
-        self.current_level.draw(self.screen)
-        self.active_sprite_list.draw(self.screen)
+        if(self.render):
+            # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
+            self.current_level.draw(self.screen)
+            self.active_sprite_list.draw(self.screen)
 
-        font = pygame.font.Font('freesansbold.ttf', 16)
-        text = font.render(str(int(reward)), True, WHITE, BLACK)
-        textRect = text.get_rect()
-        textRect.center = (32, 32)
-        self.screen.blit(text, textRect)
-        # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
-        
-        # Limit to 60 frames per second
-        #pygame.time.Clock().tick(180)
-        
-        # Go ahead and update the screen with what we've drawn.
-        pygame.display.flip()
+            font = pygame.font.Font('freesansbold.ttf', 16)
+            text = font.render(str(int(self.reward)), True, WHITE, BLACK)
+            textRect = text.get_rect()
+            textRect.center = (32, 32)
+            self.screen.blit(text, textRect)
+            
+            # Limit to 60 frames per second
+            pygame.time.Clock().tick(60)
+
+            # Go ahead and update the screen with what we've drawn.
+            pygame.display.flip()
+
+            # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
+
          
         # Update observation space
         self.observation_space = [0 for i in range(18)]
@@ -390,13 +395,18 @@ class LegendaryNinja_v0():
             self.observation_space[3*i+3] = p[i].rect.x
             self.observation_space[3*i+4] = p[i].rect.x+p[i].rect.width
             self.observation_space[3*i+5] = p[i].rect.y
-
-        return self.observation_space, reward, done
+        
+        # update the frame count
+        global f
+        f = f + 1
+        
+        return self.observation_space, self.reward, done
 
 
     def reset(self):
         global f
-        f = -1
+        f = 0
+        self.reward = 0
          # Create the player
         self.player = Player()
         # Create the level
@@ -422,6 +432,12 @@ class LegendaryNinja_v0():
             self.observation_space[3*i+5] = p[i].rect.y
 
         self.player_platform = self.current_level.platform_list.sprites()[0]
+
+        if(self.render):
+            # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
+            self.current_level.draw(self.screen)
+            self.active_sprite_list.draw(self.screen)
+            # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
 
         return self.observation_space
 
