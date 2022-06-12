@@ -289,9 +289,8 @@ class Level_01(Level):
  
 class LegendaryNinja_v0():
 
-    def __init__(self, render):
+    def __init__(self):
 
-        self.render = render
         self.reward = 0
         pygame.init()
 
@@ -311,25 +310,21 @@ class LegendaryNinja_v0():
         self.action_space = [0, 1, 2, 3]
 
         # Update observation space
-        self.observation_space = [0 for i in range(18)]
 
-        if(render):
-            # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
-            # Set the height and width of the screen
-            size = [SCREEN_WIDTH, SCREEN_HEIGHT]
-            self.screen = pygame.display.set_mode(size)
-            pygame.display.set_caption("LegendaryNinja")
-            self.current_level.draw(self.screen)
-            self.active_sprite_list.draw(self.screen)
-            # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
-        else:
-            pygame.display.quit()
+
+        # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
+        # Set the height and width of the screen
+        size = [SCREEN_WIDTH, SCREEN_HEIGHT]
+        self.screen = pygame.display.set_mode(size)
+        pygame.display.set_caption("LegendaryNinja")
+        # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
+
        
 
     
     def step(self, action):
         done = False
-        
+        global f
         self.reward = 0.1
         
         if action == self.action_space[0]:
@@ -353,6 +348,9 @@ class LegendaryNinja_v0():
         or (self.player.rect.y <  100)):
             done = True    
 
+        if(f>2000):
+            done = True
+
         
         p = self.current_level.platform_list.sprites()
         for i in range(len(p)):
@@ -360,44 +358,27 @@ class LegendaryNinja_v0():
             and self.player.rect.x > p[i].rect.x-self.player.rect.width
             and self.player.rect.y + self.player.rect.height <= p[i].rect.y
             and self.player.rect.y + self.player.rect.height >= p[i].rect.y-1):
-                if(self.player_platform != p[i]):
-                    print()
+                if(self.player_platform != p[i] and self.player_platform.rect.y<p[i].rect.y):
                     self.player_platform = p[i]
                     self.reward += 0.5
 
-        if(self.render):
-            # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
-            self.current_level.draw(self.screen)
-            self.active_sprite_list.draw(self.screen)
+        # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
+        self.current_level.draw(self.screen)
+        self.active_sprite_list.draw(self.screen)
+        
+        # Limit to 60 frames per second
+        #pygame.time.Clock().tick(60)
 
-            font = pygame.font.Font('freesansbold.ttf', 16)
-            text = font.render(str(int(self.reward)), True, WHITE, BLACK)
-            textRect = text.get_rect()
-            textRect.center = (32, 32)
-            self.screen.blit(text, textRect)
-            
-            # Limit to 60 frames per second
-            pygame.time.Clock().tick(60)
+        # Go ahead and update the screen with what we've drawn.
+        pygame.display.flip()
 
-            # Go ahead and update the screen with what we've drawn.
-            pygame.display.flip()
-
-            # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
+        # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
 
          
         # Update observation space
-        self.observation_space = [0 for i in range(18)]
-        self.observation_space[0] = self.player.rect.x
-        self.observation_space[1] = self.player.rect.y
-        self.observation_space[2] = self.player.change_y
-        
-        for i in range(len(p)):
-            self.observation_space[3*i+3] = p[i].rect.x
-            self.observation_space[3*i+4] = p[i].rect.x+p[i].rect.width
-            self.observation_space[3*i+5] = p[i].rect.y
+        self.observation_space = pygame.surfarray.array3d(self.screen)
         
         # update the frame count
-        global f
         f = f + 1
         
         return self.observation_space, self.reward, done
@@ -418,30 +399,15 @@ class LegendaryNinja_v0():
         self.player.rect.y = 230 - self.player.rect.height
         self.active_sprite_list.add(self.player)
 
-
-        # Update observation space
-        self.observation_space = [0 for i in range(18)]
-        self.observation_space[0] = self.player.rect.x
-        self.observation_space[1] = self.player.rect.y
-        self.observation_space[2] = self.player.change_y
-        p = self.current_level.platform_list.sprites()
-        
-        for i in range(len(p)):
-            self.observation_space[3*i+3] = p[i].rect.x
-            self.observation_space[3*i+4] = p[i].rect.x+p[i].rect.width
-            self.observation_space[3*i+5] = p[i].rect.y
-
-        self.player_platform = self.current_level.platform_list.sprites()[0]
-
-        if(self.render):
-            # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
-            self.current_level.draw(self.screen)
-            self.active_sprite_list.draw(self.screen)
-            # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
+        # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
+        self.current_level.draw(self.screen)
+        self.active_sprite_list.draw(self.screen)
+        # Go ahead and update the screen with what we've drawn.
+        pygame.display.flip()
+        # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
+        self.observation_space = pygame.surfarray.array3d(self.screen)
 
         return self.observation_space
 
     def close(self):
         pygame.quit()
- 
- 
