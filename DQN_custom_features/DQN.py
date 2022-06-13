@@ -9,29 +9,28 @@ import os
 from tqdm import tqdm
 total_rewards = []
 import matplotlib.pyplot as plt
-import cv2
 
 START_EPSILON = 1
 END_EPSILON = 0.1
-START_LEARNING_RATE = 1e-4
-END_LEARNING_RATE = 1e-7
+START_LEARNING_RATE = 1e-6
+END_LEARNING_RATE = 1e-6
 NUMBER_OF_ITERATIONS = 100000
-
-def soft_update(target, source, tau):
-    for target_param, param in zip(target.parameters(), source.parameters()):
-        target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
-
+NUMBER_OF_START_ITERATINS = 10000
+NUMBER_OF_ITERATIONS_C = 50000
 
 class replay_buffer():
+
 
     def __init__(self, capacity):
         self.capacity = capacity  # the size of the replay buffer
         self.memory = deque(maxlen=capacity)  # replay buffer itself
 
     def insert(self, state, action, reward, next_state, done):
+
         self.memory.append([state, action, reward, next_state, done])
 
     def sample(self, batch_size):
+
         batch = random.sample(self.memory, batch_size)
         observations, actions, rewards, next_observations, done = zip(*batch)
         return observations, actions, rewards, next_observations, done
@@ -39,26 +38,28 @@ class replay_buffer():
 
 class Net(nn.Module):
 
+
     def __init__(self):
         super(Net, self).__init__()
+        self.input_state = 18  # the dimension of state space
         self.num_actions = 4  # the dimension of action space
-        self.conv1 = nn.Conv2d(4, 16, 8, stride=4)
-        self.conv2 = nn.Conv2d(16, 32, 4, stride=2)
-        self.fc1 = nn.Linear(2592, 256)  # output layer
-        self.fc2 = nn.Linear(256, self.num_actions)  # output layer
+        self.fc1 = nn.Linear(self.input_state, 512)  # input layer
+        self.fc2 = nn.Linear(512, 512)  # hidden layer
+        self.fc3 = nn.Linear(512, 512)  # hidden layer
+        self.fc4 = nn.Linear(512, self.num_actions)  # output layer
 
     def forward(self, states):
-        x = F.relu(self.conv1(states))
-        x = F.relu(self.conv2(x))
-        x = torch.reshape(x, (-1, 2592))
-        x = F.relu(self.fc1(x))
-        q_values = self.fc2(x)
+
+        x = F.relu(self.fc1(states))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        q_values = self.fc4(x)
         return q_values
 
 
 class Agent():
-    def __init__(self, env, epsilon=START_EPSILON, learning_rate=START_LEARNING_RATE, GAMMA=0.99, batch_size=32, capacity=100000):
-
+    def __init__(self, env, device, epsilon=START_EPSILON, learning_rate=START_LEARNING_RATE, GAMMA=0.99, batch_size=32, capacity=500000):
+        self.device = device
         self.env = env
         self.n_actions = 4  # the number of actions
         self.count = 0  # recording the number of iterations
@@ -70,10 +71,8 @@ class Agent():
         self.capacity = capacity
 
         self.buffer = replay_buffer(self.capacity)
-        self.evaluate_net = Net()  # the evaluate network
-        self.target_net = Net()  # the target network
-
-        soft_update(self.target_net, self.evaluate_net, 1)
+        self.evaluate_net = Net().to(device)  # the evaluate network
+        self.target_net = Net().to(device)  # the target network
 
         self.optimizer = torch.optim.Adam(
             self.evaluate_net.parameters(), lr=self.learning_rate)  # Adam is a method using to optimize the neural network
@@ -82,15 +81,15 @@ class Agent():
 
         if self.count % 20 == 0:
             self.target_net.load_state_dict(self.evaluate_net.state_dict())
-
+        #soft_update(self.target_net, self.evaluate_net, 0.005)
 
         # Begin your code
         observations, actions, rewards, next_observations, done = self.buffer.sample(self.batch_size)
         
-        observations = torch.FloatTensor(np.array(observations))
-        actions = torch.LongTensor(actions)
-        next_observations = torch.FloatTensor(np.array(next_observations))
-        rewards = torch.FloatTensor(rewards)
+        observations = torch.FloatTensor(np.array(observations)).to(self.device)
+        actions = torch.LongTensor(actions).to(self.device)
+        next_observations = torch.FloatTensor(np.array(next_observations)).to(self.device)
+        rewards = torch.FloatTensor(rewards).to(self.device)
         
         actions = actions.unsqueeze(-1)
         state_action_values  = self.evaluate_net.forward(observations) 
@@ -118,7 +117,8 @@ class Agent():
         return loss
     
 
-    def choose_action(self, stack):
+    def choose_action(self, state):
+
 
         with torch.no_grad():
             # Begin your code
@@ -126,124 +126,111 @@ class Agent():
             if(explore):
                 return random.choice(env.action_space)
             else:
-                Q = self.target_net.forward(torch.FloatTensor(stack)).squeeze(0).detach()
-                action = int(torch.argmax(Q).numpy())
+                Q = self.target_net.forward(torch.FloatTensor(state).to(self.device)).squeeze(0).detach()
+                action = int(torch.argmax(Q).cpu().numpy())
                 return action
             
             # End your code
 
-    def check_max_Q(self, starting_stack):
+    def check_max_Q(self, state):
+
         # Begin your code
         Q = self.target_net.forward(
-                torch.FloatTensor(starting_stack)).squeeze(0).detach()
+                torch.FloatTensor(state).to(self.device)).squeeze(0).detach()
 
-        return float(torch.max(Q).numpy())
+        return float(torch.max(Q).cpu().numpy())
         # End your code
 
 
-def train(env):
+def train(env, device):
 
-    agent = Agent(env)
-    episode = 300
+    agent = Agent(env, device)
     steps = []
     loss = []
     maxQ = []
-
     state = env.reset()
-    # resize the input and convert it to gray 
-    state  = cv2.cvtColor(cv2.resize(state, (84, 84)), cv2.COLOR_BGR2GRAY)
-    # create variables to stack last 4 frames
-    stack = np.stack((state, state, state, state), axis=0)
-    starting_stack = stack
-    next_stack = np.stack((state, state, state, state), axis=0)
+    starting_state = state
     total_steps = 0
-    
-    for i in tqdm(range(NUMBER_OF_ITERATIONS+1000)):
-
+    e_reduction = pow((END_EPSILON/START_EPSILON), 1/NUMBER_OF_ITERATIONS)
+    lr_reduction = pow((END_LEARNING_RATE/START_LEARNING_RATE), 1/NUMBER_OF_ITERATIONS)
+    for i in tqdm(range(NUMBER_OF_ITERATIONS+NUMBER_OF_START_ITERATINS+NUMBER_OF_ITERATIONS_C)):
         agent.count += 1
-        action = agent.choose_action(stack)
+        action = agent.choose_action(state)
         next_state, reward, done = env.step(action)
         total_steps += 1
-        # resize the input and convert it to gray
-        next_state  = cv2.cvtColor(cv2.resize(next_state, (84, 84)), cv2.COLOR_BGR2GRAY)
-        next_state = np.reshape(next_state, (1, 84, 84))
-        # add a new frame to the stack
-        next_stack = np.append(next_state, next_stack[:3, :, :], axis=0)
         # insert a memory
-        agent.buffer.insert(stack, action, reward, next_stack, int(done))
+        agent.buffer.insert(state, action, reward, next_state, int(done))
         # start learning, if there is enough memories 
-        if agent.count >= 1000:
-            loss.append(agent.learn().detach().numpy())
+        if agent.count >= NUMBER_OF_START_ITERATINS:
+            loss.append(agent.learn().detach().cpu().numpy())
             # reduce the exploration rate
-            agent.epsilon = agent.epsilon * pow((END_EPSILON/START_EPSILON), 1/NUMBER_OF_ITERATIONS)
+            agent.epsilon = agent.epsilon * e_reduction
             # reduce the learning rate
-            agent.learning_rate = agent.learning_rate * pow((END_LEARNING_RATE/START_LEARNING_RATE), 1/NUMBER_OF_ITERATIONS)
+            agent.learning_rate = agent.learning_rate * lr_reduction
+        if agent.count >= NUMBER_OF_START_ITERATINS+NUMBER_OF_ITERATIONS:
+            loss.append(agent.learn().detach().cpu().numpy())
         # record the maximum Q of the starting state
-        maxQ.append(agent.check_max_Q(starting_stack))
+        maxQ.append(agent.check_max_Q(starting_state))
         # next state is now the current state
-        stack = next_stack
+        state = next_state
         # reset the game, if it is game over 
         if done:
             steps.append(total_steps)
-
             # RESET
             state = env.reset()
-            # resize the input and convert it to gray 
-            state  = cv2.cvtColor(cv2.resize(state, (84, 84)), cv2.COLOR_BGR2GRAY)
-            # create variables to stack last 4 frames
-            stack = np.stack((state, state, state, state), axis=0)
-            starting_stack = stack
-            next_stack = np.stack((state, state, state, state), axis=0)
             total_steps = 0
 
 
     torch.save(agent.target_net.state_dict(), "./Tables/DQN.pt")
     
     plt.figure("MaxQ")
+    plt.ylabel("Q-value of the starting state")
+    plt.xlabel("Iterations")
     plt.plot(maxQ)
+    plt.savefig('maxQ.png')
+
     plt.figure("Loss")
+    plt.ylabel("Loss")
+    plt.xlabel("Iterations")
     plt.plot(loss)
+    plt.savefig('Loss.png')
+
     plt.figure("Total Steps")
+    plt.ylabel("Total steps (max:2000)")
+    plt.xlabel("Iterations")
     plt.plot(steps)
+    plt.savefig('Total Steps.png')
+
     plt.show()
 
 
-def test(env):
+def test(env, device):
 
     rewards = []
-    testing_agent = Agent(env)
+    testing_agent = Agent(env, device)
     testing_agent.target_net.load_state_dict(torch.load("./Tables/DQN.pt"))
-    for _ in range(3):
+    for _ in range(1):
         state = env.reset()
-        # resize the input and convert it to gray 
-        state  = cv2.cvtColor(cv2.resize(state, (84, 84)), cv2.COLOR_BGR2GRAY)
-        # create variables to stack last 4 frames
-        stack = np.stack((state, state, state, state), axis=0)
-        next_stack = np.stack((state, state, state, state), axis=0)
         count = 0
         while True:
             Q = testing_agent.target_net.forward(
-                torch.FloatTensor(stack)).squeeze(0).detach()
-            action = int(torch.argmax(Q).numpy())
-            next_state, _, done = env.step(action)
-            # resize the input and convert it to gray
-            next_state  = cv2.cvtColor(cv2.resize(next_state, (84, 84)), cv2.COLOR_BGR2GRAY)
-            next_state = np.reshape(next_state, (1, 84, 84))
-            # add a new frame to the stack
-            next_stack = np.append(next_state, next_stack[:3, :, :], axis=0)
+                torch.FloatTensor(state).to(device)).squeeze(0).detach()
+            action = int(torch.argmax(Q).cpu().numpy())
+            next_state, r, done = env.step(action)
             count = count + 1
             if done:
                 rewards.append(count)
                 break
-            stack = next_stack
+            state = next_state
 
-    print(f"reward: {np.mean(rewards)}")
-
+    print(f"Steps: {np.mean(rewards)}")
 
 
 if __name__ == "__main__":
 
-    env = LegendaryNinja_v0()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    env = LegendaryNinja_v0(render=False)
 
     if not os.path.exists("./Tables"):
         os.mkdir("./Tables")
@@ -251,14 +238,10 @@ if __name__ == "__main__":
     # training section:
     for i in range(1):
         print(f"#{i + 1} training progress")
-        train(env)
+        train(env, device)
     #testing section:
-    env = LegendaryNinja_v0()
-    test(env)
-    
-    if not os.path.exists("./Rewards"):
-        os.mkdir("./Rewards")
+    env = LegendaryNinja_v0(render=True)
+    test(env, device)
 
-    np.save("./Rewards/DQN_rewards.npy", np.array(total_rewards))
 
     env.close()

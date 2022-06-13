@@ -328,6 +328,7 @@ class LegendaryNinja_v0():
 
     
     def step(self, action):
+        global f
         done = False
         
         self.reward = 0.1
@@ -351,7 +352,11 @@ class LegendaryNinja_v0():
 
         if((self.player.rect.y > SCREEN_HEIGHT - 100 - self.player.rect.height)
         or (self.player.rect.y <  100)):
-            done = True    
+            done = True
+            self.reward -= 1    
+
+        if(f>2000):
+            done = True
 
         
         p = self.current_level.platform_list.sprites()
@@ -361,20 +366,13 @@ class LegendaryNinja_v0():
             and self.player.rect.y + self.player.rect.height <= p[i].rect.y
             and self.player.rect.y + self.player.rect.height >= p[i].rect.y-1):
                 if(self.player_platform != p[i]):
-                    print()
                     self.player_platform = p[i]
-                    self.reward += 0.5
+                    self.reward += 1
 
         if(self.render):
             # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
             self.current_level.draw(self.screen)
             self.active_sprite_list.draw(self.screen)
-
-            font = pygame.font.Font('freesansbold.ttf', 16)
-            text = font.render(str(int(self.reward)), True, WHITE, BLACK)
-            textRect = text.get_rect()
-            textRect.center = (32, 32)
-            self.screen.blit(text, textRect)
             
             # Limit to 60 frames per second
             pygame.time.Clock().tick(60)
@@ -397,7 +395,7 @@ class LegendaryNinja_v0():
             self.observation_space[3*i+5] = p[i].rect.y
         
         # update the frame count
-        global f
+        
         f = f + 1
         
         return self.observation_space, self.reward, done

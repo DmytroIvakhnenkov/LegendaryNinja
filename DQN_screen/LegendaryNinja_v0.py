@@ -346,6 +346,7 @@ class LegendaryNinja_v0():
 
         if((self.player.rect.y > SCREEN_HEIGHT - 100 - self.player.rect.height)
         or (self.player.rect.y <  100)):
+            self.reward -= 1
             done = True    
 
         if(f>2000):
@@ -360,7 +361,7 @@ class LegendaryNinja_v0():
             and self.player.rect.y + self.player.rect.height >= p[i].rect.y-1):
                 if(self.player_platform != p[i] and self.player_platform.rect.y<p[i].rect.y):
                     self.player_platform = p[i]
-                    self.reward += 0.5
+                    self.reward += 1
 
         # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
         self.current_level.draw(self.screen)
