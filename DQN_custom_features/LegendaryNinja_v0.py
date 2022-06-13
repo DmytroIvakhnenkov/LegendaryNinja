@@ -355,7 +355,7 @@ class LegendaryNinja_v0():
             done = True
             self.reward -= 1    
 
-        if(f>2000):
+        if(f>1998):
             done = True
 
         
