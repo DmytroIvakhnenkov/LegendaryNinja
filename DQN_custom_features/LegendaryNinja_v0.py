@@ -439,5 +439,18 @@ class LegendaryNinja_v0():
 
         return self.observation_space
 
+    def save(self):
+        global f
+        self.f = f
+        self.save_player = self.player
+        
+    def load(self):
+        global f
+        f = self.f
+        self.player = self.save_player
+        self.current_level = self.player.level
+        self.active_sprite_list = pygame.sprite.Group()
+        self.active_sprite_list.add(self.player)
+
     def close(self):
         pygame.quit()

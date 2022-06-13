@@ -1,3 +1,4 @@
+from this import d
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,12 +12,12 @@ total_rewards = []
 import matplotlib.pyplot as plt
 
 START_EPSILON = 1
-END_EPSILON = 0.1
+END_EPSILON = 0.01
 START_LEARNING_RATE = 1e-6
 END_LEARNING_RATE = 1e-6
-NUMBER_OF_ITERATIONS = 100000
 NUMBER_OF_START_ITERATINS = 10000
-NUMBER_OF_ITERATIONS_C = 50000
+NUMBER_OF_ITERATIONS = 200000
+NUMBER_OF_ITERATIONS_C = 100000
 
 class replay_buffer():
 
@@ -169,6 +170,8 @@ def train(env, device):
             agent.learning_rate = agent.learning_rate * lr_reduction
         if agent.count >= NUMBER_OF_START_ITERATINS+NUMBER_OF_ITERATIONS:
             loss.append(agent.learn().detach().cpu().numpy())
+            if is_game_solved(env, device, agent.target_net):
+                break
         # record the maximum Q of the starting state
         maxQ.append(agent.check_max_Q(starting_state))
         # next state is now the current state
@@ -197,33 +200,51 @@ def train(env, device):
 
     plt.figure("Total Steps")
     plt.ylabel("Total steps (max:2000)")
-    plt.xlabel("Iterations")
+    plt.xlabel("Game number")
     plt.plot(steps)
     plt.savefig('Total Steps.png')
 
     plt.show()
 
+def is_game_solved(env, device, target_net):
+    env.save()
+    state = env.reset()
+    c = 0
+    testing_agent = Agent(env, device)
+    testing_agent.target_net.load_state_dict(target_net.state_dict())
+    testing_agent.epsilon = 0
+    while True:
+        action = testing_agent.choose_action(state)
+        next_state, _, done = env.step(action)
+        c += 1
+        if done:
+            break
+        state = next_state
+        
+    env.load()
+
+    if (c > 2000):
+        return True
+    return False
 
 def test(env, device):
 
-    rewards = []
+    count = 0
     testing_agent = Agent(env, device)
     testing_agent.target_net.load_state_dict(torch.load("./Tables/DQN.pt"))
-    for _ in range(1):
-        state = env.reset()
-        count = 0
-        while True:
-            Q = testing_agent.target_net.forward(
-                torch.FloatTensor(state).to(device)).squeeze(0).detach()
-            action = int(torch.argmax(Q).cpu().numpy())
-            next_state, r, done = env.step(action)
-            count = count + 1
-            if done:
-                rewards.append(count)
-                break
-            state = next_state
 
-    print(f"Steps: {np.mean(rewards)}")
+    state = env.reset()
+    while True:
+        Q = testing_agent.target_net.forward(
+            torch.FloatTensor(state).to(device)).squeeze(0).detach()
+        action = int(torch.argmax(Q).cpu().numpy())
+        next_state, _, done = env.step(action)
+        count = count + 1
+        if done:
+            break
+        state = next_state
+
+    print(f"Steps: {(count)}")
 
 
 if __name__ == "__main__":
