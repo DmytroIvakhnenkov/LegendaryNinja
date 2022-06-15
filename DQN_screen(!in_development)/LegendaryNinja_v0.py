@@ -349,7 +349,7 @@ class LegendaryNinja_v0():
             self.reward -= 1
             done = True    
 
-        if(f>2000):
+        if(f>1998):
             done = True
 
         
@@ -409,6 +409,19 @@ class LegendaryNinja_v0():
         self.observation_space = pygame.surfarray.array3d(self.screen)
 
         return self.observation_space
+
+    def save(self):
+        global f
+        self.f = f
+        self.save_player = self.player
+        
+    def load(self):
+        global f
+        f = self.f
+        self.player = self.save_player
+        self.current_level = self.player.level
+        self.active_sprite_list = pygame.sprite.Group()
+        self.active_sprite_list.add(self.player)
 
     def close(self):
         pygame.quit()

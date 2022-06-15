@@ -1,4 +1,3 @@
-from this import d
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -59,7 +58,7 @@ class Net(nn.Module):
 
 
 class Agent():
-    def __init__(self, env, device, epsilon=START_EPSILON, learning_rate=START_LEARNING_RATE, GAMMA=0.99, batch_size=32, capacity=500000):
+    def __init__(self, env, device, epsilon=START_EPSILON, learning_rate=START_LEARNING_RATE, GAMMA=0.99, batch_size=32, capacity=200000):
         self.device = device
         self.env = env
         self.n_actions = 4  # the number of actions
@@ -162,7 +161,7 @@ def train(env, device):
         # insert a memory
         agent.buffer.insert(state, action, reward, next_state, int(done))
         # start learning, if there is enough memories 
-        if agent.count >= NUMBER_OF_START_ITERATINS:
+        if agent.count >= NUMBER_OF_START_ITERATINS and agent.count < NUMBER_OF_START_ITERATINS+NUMBER_OF_ITERATIONS:
             loss.append(agent.learn().detach().cpu().numpy())
             # reduce the exploration rate
             agent.epsilon = agent.epsilon * e_reduction
@@ -170,7 +169,7 @@ def train(env, device):
             agent.learning_rate = agent.learning_rate * lr_reduction
         if agent.count >= NUMBER_OF_START_ITERATINS+NUMBER_OF_ITERATIONS:
             loss.append(agent.learn().detach().cpu().numpy())
-            if is_game_solved(env, device, agent.target_net):
+            if agent.count % 20 == 0 and is_game_solved(env, device, agent.target_net):
                 break
         # record the maximum Q of the starting state
         maxQ.append(agent.check_max_Q(starting_state))
