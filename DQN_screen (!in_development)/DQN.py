@@ -8,9 +8,11 @@ import random
 from collections import deque
 import os
 from tqdm import tqdm
-total_rewards = []
 import matplotlib.pyplot as plt
 import cv2
+
+total_rewards = []
+
 
 DEVICE = "cuda"
 START_EPSILON = 1

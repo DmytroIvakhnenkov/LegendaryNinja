@@ -7,8 +7,9 @@ import random
 from collections import deque
 import os
 from tqdm import tqdm
-total_rewards = []
 import matplotlib.pyplot as plt
+
+total_rewards = []
 
 START_EPSILON = 1
 END_EPSILON = 0.01
