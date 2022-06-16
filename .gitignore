@@ -5,3 +5,5 @@ Lib/
 Scripts/
 share/
 pyvenv.cfg
+.gitignore
+.gitattributes
