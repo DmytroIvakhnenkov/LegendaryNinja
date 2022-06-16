@@ -28,7 +28,7 @@ We used PyTorch to implement the neural networks. We use Adam as the optimizer, 
 
 Neural network used by our algorithm:
 
-![net](Images/net.png)
+![net](Images/Net.PNG)
 
 ## Results
 
