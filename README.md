@@ -8,7 +8,7 @@ Go to to DQN_custom_features (FINAL) to view the code explained below.
 
 We wanted to make an AI that could play a platformer, a classic arcade game in which the core objective is to move the player between falling platforms and try to  survive as long as possible.
 
-![gif](Images/aigameplay.gif)
+<img src="Images/aigameplay.gif" width="450">
 
 To do this, we used Reinforcement Learning (RL), a method that trains the agent (player) by feeding rewards and observations to the agent after an action is taken in the environment. The code was written in Python 3.
 
@@ -32,7 +32,7 @@ We used PyTorch to implement the neural networks. We use Adam as the optimizer, 
 
 Neural network used by our algorithm:
 
-![net](Images/Net.PNG)
+<img src="Images/Net.PNG" width="450">
 
 ## Results
 
@@ -41,11 +41,11 @@ During training, there were two evaluation metrics that we used: maximum Q-value
 
 <u>Maximum Q-value of the starting state</u>: The closer algorithm to the true value of Q the better it estimates and takes actions. In our case, this value is around 10.5. We can see that our model’s guess is two times bigger. In general, as seen in [1] and [2] DQN tends to overestimate this value. Nonetheless, looking at the graph we can see that the neural net has not converged yet, but is about to. This is good news.
 
-![graf1](DQN_custom_features%20(FINAL)/maxQ.png)
+<img src="DQN_custom_features%20(FINAL)/maxQ.png" width="450">
 
 <u>Amount of steps/frames the agent has progressed</u>: This metric is simple to understand. More steps the agent can take means it can advance further in the game. We can see that on the last games that the agent has played, it was really close to completing the game or has completed it.
 
-![graf1](DQN_custom_features%20(FINAL)/Total%20Steps.png)
+<img src="DQN_custom_features%20(FINAL)/Total%20Steps.png" width="450">
 
 In conclusion, we have trained the network until convergence and got the good weights that allow the agent to complete the game.
 
