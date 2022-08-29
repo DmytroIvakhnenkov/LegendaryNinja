@@ -6,7 +6,7 @@ Go to to DQN_custom_features (FINAL) to view the code explained below.
 
 ## Overview
 
-We wanted to make an AI that could play a platformer, a classic arcade game in which the core objective is to move the player between rising platforms and try to  survive as long as possible.
+We wanted to make an AI that could play a platformer, a classic arcade game in which the core objective is to move the player between falling platforms and try to  survive as long as possible.
 
 ![gif](Images/aigameplay.gif)
 
